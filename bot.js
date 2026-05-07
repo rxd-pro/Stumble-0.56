@@ -3,22 +3,27 @@ const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require
 const mongoose = require("mongoose");
 const { DiscordEmbed } = require("./DiscordUtils");
 
-// 1. DATABASE CONNECTION (Sharing the same DB as index.js)
-mongoose.connect(process.env.mongoUri).then(() => console.log("🤖 Bot Database Connected"));
+// 1. DATABASE CONNECTION - Syncs with BackendUtils.js
+// We specify 'StumbleGuys' as the database name
+mongoose.connect(process.env.mongoUri, { dbName: 'StumbleGuys' })
+    .then(() => console.log("🤖 Bot Connected to StumbleGuys Database"));
 
-const User = mongoose.model('User', new mongoose.Schema({
-    playerId: String, 
-    discordId: { type: String, default: null },
+// 2. USER SCHEMA - Matches BackendUtils UserModel
+const UserSchema = new mongoose.Schema({
+    id: Number,           // Your random 4-digit ID
+    stumbleId: String,    // Your unique Stumble ID
     username: String,
+    discordId: { type: String, default: null },
     gems: { type: Number, default: 0 },
-    isBanned: { type: Boolean, default: false },
-    banReason: { type: String, default: "No reason provided" }
-}), 'users');
+    isBanned: { type: Boolean, default: false }
+}, { collection: 'Users' }); // Explicitly use the 'Users' collection
 
-// 2. COMMAND DEFINITIONS
+const User = mongoose.model('User', UserSchema);
+
+// 3. COMMANDS
 const commands = [
-    new SlashCommandBuilder().setName('link').setDescription('Link your 4-digit ID').addStringOption(o => o.setName('id').setDescription('4-digit ID').setRequired(true)),
-    new SlashCommandBuilder().setName('search').setDescription('Search player stats').addStringOption(o => o.setName('id').setDescription('4-digit ID').setRequired(true)),
+    new SlashCommandBuilder().setName('link').setDescription('Link your ID').addStringOption(o => o.setName('id').setDescription('Your 4-digit ID').setRequired(true)),
+    new SlashCommandBuilder().setName('changename').setDescription('Change name').addStringOption(o => o.setName('name').setDescription('New Name').setRequired(true)),
     new SlashCommandBuilder().setName('dbping').setDescription('Check bot latency')
 ];
 
@@ -36,23 +41,34 @@ client.on('interactionCreate', async i => {
     if (!i.isChatInputCommand()) return;
     await i.deferReply({ ephemeral: true });
 
+    // --- LINK COMMAND ---
     if (i.commandName === 'link') {
-        const id = i.options.getString('id');
-        if (id.length !== 4) return i.editReply("⚠️ ID must be 4 digits.");
+        const inputId = parseInt(i.options.getString('id'));
+        const player = await User.findOne({ id: inputId });
 
-        const player = await User.findOne({ playerId: id });
-        if (!player) return i.editReply("❌ ID not found. Open the game first!");
+        if (!player) return i.editReply("❌ That ID doesn't exist in the database. Log in to the game first!");
         
         player.discordId = i.user.id;
         await player.save();
 
-        const embed = DiscordEmbed("✅ LINK SUCCESS", `Linked ID **${id}** to <@${i.user.id}>`, "#00FF77", "StumbleNeo");
-        await i.editReply({ embeds: [embed] });
+        return i.editReply({ embeds: [DiscordEmbed("✅ LINK SUCCESS", `Linked ID **${inputId}** to <@${i.user.id}>`, "#00FF77", "StumbleNeo")] });
     }
 
-    if (i.commandName === 'dbping') {
-        await i.editReply(`🏓 Latency: ${client.ws.ping}ms`);
+    // --- CHANGENAME COMMAND ---
+    if (i.commandName === 'changename') {
+        const newName = i.options.getString('name');
+        if (newName.length < 4 || newName.length > 12) return i.editReply("⚠️ Name must be 4-12 characters.");
+
+        const player = await User.findOne({ discordId: i.user.id });
+        if (!player) return i.editReply("❌ Link your account first with `/link`.");
+
+        player.username = newName;
+        await player.save();
+
+        return i.editReply({ embeds: [DiscordEmbed("✅ NAME UPDATED", `New Name: **${newName}**`, "#00AAFF", "StumbleNeo")] });
     }
+
+    if (i.commandName === 'dbping') await i.editReply(`🏓 Latency: ${client.ws.ping}ms`);
 });
 
 client.login(process.env.DISCORD_TOKEN);
