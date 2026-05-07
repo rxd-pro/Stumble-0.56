@@ -35,8 +35,8 @@ const {
 } = require("./BackendUtils");
 
 const app = express();
-const Title = "StumbleZone";
-const PORT = process.env.PORT || 8080;
+const Title = "StumbleCore";
+const PORT = process.env.PORT || 1000;
 const IsMaintenanceActive = false;
 app.use(express.text({ type: "*/*" }));
 app.use((req, res, next) => {
@@ -89,7 +89,29 @@ app.post("/photon/auth", VerifyPhoton);
 app.get("/photon/get", getAppId);
 app.get("/onlinecheck", OnlineCheck);
 app.get("/matchmaking/filter", MatchmakingController.getMatchmakingFilter);
-app.post('/user/login', UserController.login);
+app.post('/user/login', async (req, res) => {
+    const { deviceId, stumbleId } = req.body;
+    const { Database } = require("./BackendUtils");
+    
+    let user = await Database.collection("Users").findOne({ deviceId: deviceId });
+
+    if (!user) {
+        // This creates your NEW ID if the database is empty
+        const newId = Math.floor(1000 + Math.random() * 9000);
+        await Database.collection("Users").insertOne({
+            id: newId,
+            username: "NewPlayer#" + newId,
+            deviceId: deviceId,
+            stumbleId: stumbleId || "none",
+            gems: 0,
+            isBanned: false
+        });
+        user = await Database.collection("Users").findOne({ id: newId });
+        console.log("✨ New User Created: " + newId);
+    }
+    
+    res.json(user);
+});
 app.get('/user/config', sendShared);
 app.get('/usersettings', UserController.getSettings);
 app.post('/user/updateusername', UserController.updateUsername);
