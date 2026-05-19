@@ -398,8 +398,8 @@ class UserModel {
   static async create(ip, deviceId, platformData = {}) {
   const now = new Date();
   const userId = Math.floor(Math.random() * 9999);
-  const username = 'StumbleZone ' + CryptoUtils.GenCaracters(5).toUpperCase();
-  let ipCountry = 'PL';
+  const username = 'StumbleCore ' + CryptoUtils.GenCaracters(5).toUpperCase();
+  let ipCountry = 'IN';
   let ipRegion = 'EU';
   
   try {
