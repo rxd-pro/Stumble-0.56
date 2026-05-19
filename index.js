@@ -36,7 +36,7 @@ const {
 
 const app = express();
 const Title = "StumbleZone";
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 const IsMaintenanceActive = false;
 app.use(express.text({ type: "*/*" }));
 app.use((req, res, next) => {
