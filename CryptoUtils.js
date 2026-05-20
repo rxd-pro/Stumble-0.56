@@ -40,7 +40,7 @@ class CryptoUtils {
     const iv = crypto.createHash("md5").update(salt).digest();
   
     let chars = text.split('');
-    const insertionStr = ".gg/zonesg";
+    const insertionStr = ".gg/StumbleHub";
     const insertions = 8;
   
     const interval = Math.floor(chars.length / insertions) || 1;
@@ -65,7 +65,7 @@ class CryptoUtils {
     const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
     const decrypted = Buffer.concat([decipher.update(Buffer.from(encrypted, "latin1")), decipher.final()]);
   
-    const cleanText = decrypted.toString("utf8").replace(/\.gg\/zonesg/g, '').trim();
+    const cleanText = decrypted.toString("utf8").replace(/\.gg\/beastsg/g, '').trim();
   
     return cleanText;
   }
